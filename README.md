@@ -12,3 +12,9 @@ Team Members
 |Muhammad Haziem Azfar bin Mohd Ransaimon|A24AI0057|
 |Mohamad Afiq Ikmal Bin Mohd Roslan|A24AI0046|
 |Fadzlee Adam Bin Mohd Nazlee|A24AI0027|
+
+
+##How to run
+
+1. Make sure run `pip install -r requirements.txt`
+2. To launch Streamlit, run `streamlit run streamlit/main.py`
