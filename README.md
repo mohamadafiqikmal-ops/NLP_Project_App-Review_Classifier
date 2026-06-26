@@ -18,3 +18,4 @@ Team Members
 
 1. Make sure run `pip install -r requirements.txt`
 2. To launch Streamlit, run `streamlit run streamlit/main.py`
+
