@@ -95,10 +95,12 @@ st.markdown("""
 </p>
 """, unsafe_allow_html=True)
 
-BASE_DIR = Path(__file__).resolve().parent
+BASE_DIR    = Path(__file__).resolve().parent
 PROJECT_DIR = BASE_DIR.parent
-MODEL_DIR = BASE_DIR / "models"
-DATA_PATH = PROJECT_DIR / "notebooks" / "balanced_app_reviews.csv"
+MODEL_DIR   = BASE_DIR / "models"
+DATA_PATH   = PROJECT_DIR / "notebooks" / "balanced_app_reviews.csv"
+
+BERT_MODEL_PATH = PROJECT_DIR / "streamlit" / "models" / "bert_sentiment_model"
 
 @st.cache_data
 def load_data():
@@ -135,29 +137,38 @@ df = load_data()
 def load_ml_assets():
     assets = {}
     
-    assets["le"] = joblib.load(MODEL_DIR / "label_encoder.pkl")
-    assets["bow"] = joblib.load(MODEL_DIR / "bow_vectorizer.pkl")
+    assets["le"]    = joblib.load(MODEL_DIR / "label_encoder.pkl")
+    assets["bow"]   = joblib.load(MODEL_DIR / "bow_vectorizer.pkl")
     assets["tfidf"] = joblib.load(MODEL_DIR / "tfidf_vectorizer.pkl")
     
-    # 2. Load the 4 model permutations
-    assets["nb_bow"] = joblib.load(MODEL_DIR / "nb_bow.pkl")
+    assets["nb_bow"]   = joblib.load(MODEL_DIR / "nb_bow.pkl")
     assets["nb_tfidf"] = joblib.load(MODEL_DIR / "nb_tfidf.pkl")
-    assets["lr_bow"] = joblib.load(MODEL_DIR / "lr_bow.pkl")
+    assets["lr_bow"]   = joblib.load(MODEL_DIR / "lr_bow.pkl")
     assets["lr_tfidf"] = joblib.load(MODEL_DIR / "lr_tfidf.pkl")
     
-    try:
-        bert_path = MODEL_DIR / "bert_model"
-        if bert_path.exists():
-            assets["bert_tokenizer"] = AutoTokenizer.from_pretrained(bert_path)
-            assets["bert_model"] = AutoModelForSequenceClassification.from_pretrained(bert_path)
-        else:
-            assets["bert_tokenizer"] = AutoTokenizer.from_pretrained("bert-base-uncased")
-            assets["bert_model"] = AutoModelForSequenceClassification.from_pretrained("bert-base-uncased", num_labels=3)
-        assets["bert_model"].eval()
-        assets["bert_available"] = True
-    except Exception as e:
+    if not BERT_MODEL_PATH.exists():
         assets["bert_available"] = False
-        
+        assets["bert_error"] = (
+            f"BERT model directory not found at:\n`{BERT_MODEL_PATH}`\n\n"
+            "Save your trained model with:\n"
+            "```python\n"
+            f"model.save_pretrained(r'{BERT_MODEL_PATH}')\n"
+            f"tokenizer.save_pretrained(r'{BERT_MODEL_PATH}')\n"
+            "```"
+        )
+    else:
+        try:
+            assets["bert_tokenizer"] = AutoTokenizer.from_pretrained(BERT_MODEL_PATH)
+            assets["bert_model"]     = AutoModelForSequenceClassification.from_pretrained(BERT_MODEL_PATH)
+            assets["bert_model"].eval()
+            assets["bert_available"] = True
+        except Exception as e:
+            assets["bert_available"] = False
+            assets["bert_error"] = (
+                f"BERT model found at `{BERT_MODEL_PATH}` but failed to load.\n\n"
+                f"**Error:** `{e}`"
+            )
+
     return assets
 
 assets = load_ml_assets()
@@ -183,7 +194,7 @@ with tab1:
     clf_prefix = "lr" if classifier_choice == "Logistic Regression" else "nb"
     feat_suffix = "bow" if feature_choice == "BoW" else "tfidf"
     
-    active_model = assets[f"{clf_prefix}_{feat_suffix}"]
+    active_model      = assets[f"{clf_prefix}_{feat_suffix}"]
     active_vectorizer = assets[feat_suffix]
     
     text = st.text_input("Enter review string for classification evaluation:")
@@ -194,9 +205,9 @@ with tab1:
         else:
             transformed_input = active_vectorizer.transform([text])
             
-            conf = active_model.predict_proba(transformed_input)[0]
+            conf         = active_model.predict_proba(transformed_input)[0]
             pred_numeric = active_model.predict(transformed_input)
-            sentiment = le.inverse_transform(pred_numeric)[0]
+            sentiment    = le.inverse_transform(pred_numeric)[0]
             
             st.markdown(f"### Predicted Result Class Strategy: **{sentiment}**")
             
@@ -314,10 +325,10 @@ with tab2:
     st.markdown("---")
     st.write("### 🔤 Top 20 Frequently Occurring Keyword Contexts")
     try:
-        vectorizer = CountVectorizer(stop_words="english", max_features=20)
+        vectorizer  = CountVectorizer(stop_words="english", max_features=20)
         word_matrix = vectorizer.fit_transform(df["review_description"])
         word_counts = word_matrix.sum(axis=0).A1
-        words = vectorizer.get_feature_names_out()
+        words       = vectorizer.get_feature_names_out()
 
         top_words_df = pd.DataFrame({
             "Word": words,
@@ -341,27 +352,27 @@ with tab2:
 with tab3:
     st.subheader("Comprehensive Cross-Configuration Framework Evaluation")
     
-    X_raw = df["review_description"]
+    X_raw  = df["review_description"]
     y_true = le.transform(df["sentiment"])
     
     configurations = {
-        "Logistic Regression (BoW)": {"model": assets["lr_bow"], "vec": assets["bow"]},
-        "Logistic Regression (TF-IDF)": {"model": assets["lr_tfidf"], "vec": assets["tfidf"]},
-        "Naive Bayes (BoW)": {"model": assets["nb_bow"], "vec": assets["bow"]},
-        "Naive Bayes (TF-IDF)": {"model": assets["nb_tfidf"], "vec": assets["tfidf"]},
+        "Logistic Regression (BoW)":   {"model": assets["lr_bow"],   "vec": assets["bow"]},
+        "Logistic Regression (TF-IDF)":{"model": assets["lr_tfidf"], "vec": assets["tfidf"]},
+        "Naive Bayes (BoW)":           {"model": assets["nb_bow"],   "vec": assets["bow"]},
+        "Naive Bayes (TF-IDF)":        {"model": assets["nb_tfidf"], "vec": assets["tfidf"]},
     }
     
     results = []
     for config_name, components in configurations.items():
         X_transformed = components["vec"].transform(X_raw)
-        y_pred = components["model"].predict(X_transformed)
+        y_pred        = components["model"].predict(X_transformed)
         
         results.append({
             "Configuration Strategy": config_name,
-            "Accuracy": accuracy_score(y_true, y_pred),
+            "Accuracy":  accuracy_score(y_true, y_pred),
             "Precision": precision_score(y_true, y_pred, average="weighted", zero_division=0),
-            "Recall": recall_score(y_true, y_pred, average="weighted", zero_division=0),
-            "F1-score": f1_score(y_true, y_pred, average="weighted", zero_division=0)
+            "Recall":    recall_score(y_true, y_pred, average="weighted", zero_division=0),
+            "F1-score":  f1_score(y_true, y_pred, average="weighted", zero_division=0)
         })
         
     results_df = pd.DataFrame(results)
@@ -378,11 +389,11 @@ with tab3:
         key="cm_select"
     )
     
-    selected_components = configurations[cm_choice]
-    X_test_transformed = selected_components["vec"].transform(X_raw)
-    y_test_pred = selected_components["model"].predict(X_test_transformed)
+    selected_components  = configurations[cm_choice]
+    X_test_transformed   = selected_components["vec"].transform(X_raw)
+    y_test_pred          = selected_components["model"].predict(X_test_transformed)
     
-    cm = confusion_matrix(y_true, y_test_pred)
+    cm    = confusion_matrix(y_true, y_test_pred)
     cm_df = pd.DataFrame(cm, index=le.classes_, columns=le.classes_)
     st.dataframe(cm_df)
 
@@ -404,39 +415,41 @@ with tab5:
     st.subheader("BERT: Bidirectional Encoder Representations from Transformers")
     
     if not assets.get("bert_available", False):
-        st.error("❌ The underlying BERT neural architecture is missing or failed to initialize properly.")
-        st.info("Ensure your transformers checkpoint weights are saved inside `./streamlit/models/bert_model/` configuration paths.")
+        # Show a clear, actionable error — no silent fallback
+        st.error("❌ BERT model failed to load.")
+        st.markdown(assets.get("bert_error", "Unknown error. Check the model path and try again."))
     else:
-        
-        bert_text = st.text_area("Enter review string for Transformer contextual classification analysis:", key="bert_input_text")
+        bert_text = st.text_area(
+            "Enter review string for Transformer contextual classification analysis:",
+            key="bert_input_text"
+        )
         
         if st.button("Predict", key="bert_predict_btn"):
             if not bert_text.strip():
                 st.warning("Please provide structural context input to pass downstream to the Transformer tokenization matrix.")
             else:
                 tokenizer = assets["bert_tokenizer"]
-                model = assets["bert_model"]
+                bert_model = assets["bert_model"]
                 
                 with st.spinner("Executing sequence classification calculations across neural tensor maps..."):
                     inputs = tokenizer(
-                        bert_text, 
-                        return_tensors="pt", 
-                        padding=True, 
-                        truncation=True, 
+                        bert_text,
+                        return_tensors="pt",
+                        padding=True,
+                        truncation=True,
                         max_length=512
                     )
                     
                     with torch.no_grad():
-                        outputs = model(**inputs)
-                        logits = outputs.logits
-                        
+                        outputs      = bert_model(**inputs)
+                        logits       = outputs.logits
                         probabilities = torch.softmax(logits, dim=1).flatten().tolist()
                         prediction_id = torch.argmax(logits, dim=1).item()
                 
                 try:
                     predicted_sentiment = le.inverse_transform([prediction_id])[0]
                 except Exception:
-                    fallback_classes = list(le.classes_)
+                    fallback_classes    = list(le.classes_)
                     predicted_sentiment = fallback_classes[prediction_id] if prediction_id < len(fallback_classes) else "Unknown"
                 
                 st.markdown(f"### Prediction: **{predicted_sentiment}**")
@@ -451,5 +464,3 @@ with tab5:
                             st.progress(score)
                         with c2:
                             st.write(f"{score*100:.1f}%")
-                            
-        
