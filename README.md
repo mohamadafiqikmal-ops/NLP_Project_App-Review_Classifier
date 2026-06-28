@@ -4,7 +4,7 @@ Theme: 6; App Review Classifier
 
 Title: Thread App Review Sentiment Analysis
 
-A sentiment analysis pipeline for app reviews (Threads app reviews translated from Indonesian), comparing classical ML models against fine-tuned BERT, with results explored through an interactive Streamlit dashboard.
+A sentiment analysis pipeline for app reviews (App reviews translated from Indonesian), comparing classical ML models against fine-tuned BERT, with results explored through an interactive Streamlit dashboard.
 
 ## Team Members
 
