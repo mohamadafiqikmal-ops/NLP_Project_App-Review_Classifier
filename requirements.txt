@@ -8,3 +8,4 @@ joblib
 plotly
 torch
 transformers
+wordcloud
