@@ -16,6 +16,8 @@ import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use("Agg")
 import io, base64, re
+from PIL import Image
+from pathlib import Path
 
 try:
     from wordcloud import WordCloud
@@ -825,12 +827,32 @@ with tab5:
 
 with tab6:
     st.markdown("""
-    <h2 style="color:#fff;font-size:1.5rem;font-weight:700;margin-bottom:4px;">BERT — Experimental</h2>
+    <h2 style="color:#fff;font-size:1.5rem;font-weight:700;margin-bottom:4px;">BERT: Bidirectional Encoder Representations from Transformers</h2>
     <p style="color:#9090b0;margin-bottom:28px;">
-        Fine-tuned IndoBERT transformer model. Contextual embeddings outperform bag-of-words
-        representations but require a pre-loaded model directory.
+        Fine-tuned BERT transformer model.
     </p>
     """, unsafe_allow_html=True)
+
+    st.markdown("---")
+    st.markdown(
+        '<div class="section-label" style="margin-bottom:12px;">CONFUSION MATRIX (BERT)</div>',
+        unsafe_allow_html=True,
+    )
+
+    image_path = Path("cm_bert.png")
+
+    if image_path.exists():
+        image = Image.open(image_path)
+        st.markdown(
+            """
+            <div style="display:flex; justify-content:flex-start;">
+            """,
+            unsafe_allow_html=True
+        )
+        st.image(image, caption="BERT Prediction Result", width=400)
+        st.markdown("</div>", unsafe_allow_html=True)
+    else:
+        st.warning(f"Image not found: {image_path}")
 
     if not assets.get("bert_available", False):
         st.error("BERT model failed to load.")
